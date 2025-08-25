@@ -1,0 +1,11 @@
+  client{ID}:
+    container_name: client{ID}
+    image: client:latest
+    entrypoint: /client
+    environment:
+      - CLI_ID={ID}
+      - CLI_LOG_LEVEL={LOG_LEVEL}
+    networks:
+      - testing_net
+    depends_on:
+      - server
