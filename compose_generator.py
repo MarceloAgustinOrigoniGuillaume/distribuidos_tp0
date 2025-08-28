@@ -13,7 +13,7 @@ def read_client():
 
 
 def configure_client(base, ind, config_file):
-	return base.format(ID = str(ind), LOG_LEVEL= "DEBUG", CONFIG_FILE=config_file)
+	return base.format(ID = str(ind), CONFIG_FILE=config_file)
 
 
 def trim_initial_base(out, base, server_config_file):
