@@ -9,3 +9,5 @@
       - testing_net
     depends_on:
       - server
+    volumes:
+      -{CONFIG_FILE}:/usr/config.yaml

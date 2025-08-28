@@ -1,5 +1,5 @@
 
-import sys
+import sys,os
 
 
 def read_base():
@@ -12,14 +12,14 @@ def read_client():
 		return f.read()
 
 
-def configure_client(base, ind = 1):
-	return base.format(ID = str(ind), LOG_LEVEL= "DEBUG")
+def configure_client(base, ind, config_file):
+	return base.format(ID = str(ind), LOG_LEVEL= "DEBUG", CONFIG_FILE=config_file)
 
 
-def trim_initial_base(out, base):
+def trim_initial_base(out, base, server_config_file):
 
 	parts = base.split("$CLIENTS", 1) # max split = 1
-	out.write(parts[0])
+	out.write(parts[0].format(SERVER_CONFIG_FILE=server_config_file))
 	return parts[1]
 
 if __name__ == "__main__":
@@ -39,14 +39,21 @@ if __name__ == "__main__":
 		exit()
 
 	print(f">Output file:{file_out}, number of clients {clients_count}")
+	ROOT_DIR=os.getcwd()
+
+	server_config_file = os.path.join(ROOT_DIR, "server","config.ini")
+	client_config_file = os.path.join(ROOT_DIR, "client","config.yaml")
+	print(">Using server config at", server_config_file)
+	print(">Using client config at", client_config_file)
+
 
 	base = read_base()
 	client_base = read_client()
 	with open(file_out, "w+") as out:
-		base = trim_initial_base(out, base)
+		base = trim_initial_base(out, base, server_config_file)
 
 		for i in range(1, clients_count+1):
-			out.write(configure_client(client_base, i))
+			out.write(configure_client(client_base, i, client_config_file))
 		out.write(base)
 
 	print("Finished docker compose creation")
