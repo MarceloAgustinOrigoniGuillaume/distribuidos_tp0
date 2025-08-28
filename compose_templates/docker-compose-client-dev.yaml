@@ -10,4 +10,4 @@
     depends_on:
       - server
     volumes:
-      -{CONFIG_FILE}:/usr/config.yaml
+      - {CONFIG_FILE}:/usr/config.yaml
