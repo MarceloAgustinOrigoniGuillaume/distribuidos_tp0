@@ -2,7 +2,7 @@
 
 NETWORK_NAME="tp0_testing_net"
 SERVER_CONTAINER_NAME="server"
-SERVER_PORT=1234
+SERVER_PORT=12345
 MESSAGE="probe_message"
 
 # Run busybox container that has netcat... on the same network as tp0. 
