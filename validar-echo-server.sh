@@ -1,10 +1,15 @@
 #!/bin/bash
 
-# -w 2 == 2 seconds of inactivity for timeout.
-res=$(echo "probe_message" | netcat 127.0.0.1 1234 -w 2)
+NETWORK_NAME="tp0_testing_net"
+SERVER_CONTAINER_NAME="server"
+SERVER_PORT=1234
+MESSAGE="probe_message"
 
-if [[ "probe_message" == "$res" ]]; then
-	echo "action: test_echo_server | result: success"
+# Run busybox container that has netcat... on the same network as tp0. 
+res=$(docker run --rm --network "$NETWORK_NAME" busybox sh -c "echo '$MESSAGE' | nc $SERVER_CONTAINER_NAME $SERVER_PORT -w 1")
+
+if [[ "$res" == "$MESSAGE" ]]; then
+    echo "action: test_echo_server | result: success"
 else
-	echo "action: test_echo_server | result: fail"
+    echo "action: test_echo_server | result: fail"
 fi
