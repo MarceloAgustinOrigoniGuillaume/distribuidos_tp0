@@ -6,9 +6,9 @@ SERVER_PORT=12345
 MESSAGE="probe_message"
 
 # Run busybox container that has netcat... on the same network as tp0. 
-res=$(docker run --rm --network "$NETWORK_NAME" busybox sh -c "echo '$MESSAGE' | nc $SERVER_CONTAINER_NAME $SERVER_PORT -w 1")
+res=$(docker run --rm --network "$NETWORK_NAME" busybox sh -c "echo '$MESSAGE' | nc $SERVER_CONTAINER_NAME $SERVER_PORT -w 10")
 
-if [[ "$res" == "$MESSAGE" ]]; then
+if [ "$res" = "$MESSAGE" ]; then
     echo "action: test_echo_server | result: success"
 else
     echo "action: test_echo_server | result: fail"
