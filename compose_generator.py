@@ -19,10 +19,11 @@ def read_client():
 
 
 # Client config on docker compose instead of .env files to make it easier to configure
-def configure_client(base, ind, config_file):
+def configure_client(base, ind, config_file, agency_file):
 	str_ind = str(ind)
 	return base.format(ID = str_ind
 	  , CONFIG_FILE=config_file 
+	  , AGENCY_FILE = agency_file
 	  , INFO_NAME=CLIENT_NAME+"_"+str_ind
       , INFO_SURNAME=CLIENT_SURNAME
       , INFO_DNI=CLIENT_DNI+ind
@@ -68,7 +69,9 @@ if __name__ == "__main__":
 		base = trim_initial_base(out, base, server_config_file)
 
 		for i in range(1, clients_count+1):
-			out.write(configure_client(client_base, i, client_config_file))
+			client_agency_file = os.path.join(ROOT_DIR, ".data", "dataset",f"agency-{i}.csv")
+
+			out.write(configure_client(client_base, i, client_config_file, client_agency_file))
 		out.write(base)
 
 	print("Finished docker compose creation")
