@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net"
 	"time"
+	"sync"
+	"context"
 
 	"github.com/op/go-logging"
 )
@@ -15,7 +17,7 @@ var log = logging.MustGetLogger("log")
 type ClientConfig struct {
 	ID            string
 	ServerAddress string
-	LoopAmount    int
+	LoopAmount    int	
 	LoopPeriod    time.Duration
 }
 
@@ -23,6 +25,7 @@ type ClientConfig struct {
 type Client struct {
 	config ClientConfig
 	conn   net.Conn
+	lock     sync.Mutex // Needed since we dont know when the sigterm signal might come.	
 }
 
 // NewClient Initializes a new client receiving the configuration
@@ -46,18 +49,26 @@ func (c *Client) createClientSocket() error {
 			err,
 		)
 	}
+	c.lock.Lock()
+    defer c.lock.Unlock()	
 	c.conn = conn
 	return nil
 }
 
 // StartClientLoop Send messages to the client until some time threshold is met
-func (c *Client) StartClientLoop() {
+func (c *Client) StartClientLoop(ctx context.Context) {
 	// There is an autoincremental msgID to identify every message sent
 	// Messages if the message amount threshold has not been surpassed
 	for msgID := 1; msgID <= c.config.LoopAmount; msgID++ {
 		// Create the connection the server in every loop iteration. Send an
 		c.createClientSocket()
-
+		select {
+		case <-ctx.Done():
+			c.StopClient(); // Stop again since we dont know for sure IF the close was to this socket.
+			log.Infof("action: loop_cancel | result: success | client_id: %v", c.config.ID)
+			return
+		default: // Continue
+		}
 		// TODO: Modify the send to avoid short-write
 		fmt.Fprintf(
 			c.conn,
@@ -69,10 +80,16 @@ func (c *Client) StartClientLoop() {
 		c.conn.Close()
 
 		if err != nil {
-			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
-				c.config.ID,
-				err,
-			)
+			select {
+			case <-ctx.Done():
+				log.Infof("action: loop_cancel | result: success | client_id: %v", c.config.ID)
+			default:
+				log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
+					c.config.ID,
+					err,
+				)				
+			}
+
 			return
 		}
 
@@ -82,8 +99,29 @@ func (c *Client) StartClientLoop() {
 		)
 
 		// Wait a time between sending one message and the next one
-		time.Sleep(c.config.LoopPeriod)
+		select {
+		case <-ctx.Done():
+			log.Infof("action: loop_cancel | result: success | client_id: %v", c.config.ID)
+			return
+		case <-time.After(c.config.LoopPeriod):
+		}
 
 	}
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
+}
+
+
+func (c *Client) StopClient() {
+	c.lock.Lock()
+    defer c.lock.Unlock()	
+
+	if c.conn != nil {
+		if err := c.conn.Close(); err != nil {
+			// Already closed?
+		} else {
+			log.Infof("client %v: connection closed", c.config.ID)
+		}
+	} else { // Should not really happen but just in case.
+		log.Debugf("client %v: no connection to close", c.config.ID)
+	}
 }

@@ -6,6 +6,10 @@ import (
 	"strings"
 	"time"
 
+	"os/signal"
+    "syscall"	
+	"context"
+
 	"github.com/op/go-logging"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
@@ -90,6 +94,7 @@ func PrintConfig(v *viper.Viper) {
 	)
 }
 
+
 func main() {
 	v, err := InitConfig()
 	if err != nil {
@@ -110,6 +115,22 @@ func main() {
 		LoopPeriod:    v.GetDuration("loop.period"),
 	}
 
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Catch SIGTERM
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT)
+
 	client := common.NewClient(clientConfig)
-	client.StartClientLoop()
+
+	go func() {
+	    <-sigChan
+	    log.Info("Shutdown signal received")
+	    cancel()
+	    client.StopClient()
+	}()
+
+	client.StartClientLoop(ctx)
 }
