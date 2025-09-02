@@ -14,7 +14,6 @@ var log = logging.MustGetLogger("log")
 type ClientConfig struct {
 	ID            string
 	ServerAddress string
-	BetInfo protocol.PersonBet
 }
 
 
@@ -72,9 +71,17 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 		default: // Continue
 		}
 
+		bet:= protocol.PersonBet {
+			Name: "Some name",
+			Surname: "Some surname",
+			Dni: 324,
+			Birth: "1999-03-17",
+			Number: 213,
+		}
+
 		err:= c.protocol.SendStr(c.config.ID)
 		if err == nil {
-			err = c.protocol.SendBet(&c.config.BetInfo)
+			err = c.protocol.SendBet(&bet)
 		}
 		
 		if err != nil {
@@ -84,7 +91,7 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 			default:
 				log.Errorf("action: apuesta_enviada | result: fail | client_id: %v | %s | error: %s",
 					c.config.ID,
-					c.config.BetInfo,					
+					bet,					
 					err,
 				)				
 			}
@@ -93,7 +100,7 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 		}
 
 		log.Infof("action: apuesta_enviada | result: success | %s",
-			c.config.BetInfo.MainInfo(),
+			bet.MainInfo(),
 		)
 }
 

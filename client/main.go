@@ -15,7 +15,6 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common"
-	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/protocol"
 )
 
 var log = logging.MustGetLogger("log")
@@ -40,13 +39,7 @@ func InitConfig() (*viper.Viper, error) {
 	v.BindEnv("id")
 	v.BindEnv("server", "address")
 	v.BindEnv("log", "level")
-
-	// Not desirable to add all allowed vars here. But well. For now its the most clean
-	v.BindEnv("info.name", "INFO_NAME")
-	v.BindEnv("info.surname", "INFO_SURNAME")
-	v.BindEnv("info.dni", "INFO_DNI")
-	v.BindEnv("info.birth", "INFO_BIRTH")
-	v.BindEnv("info.number", "INFO_NUMBER")
+	v.BindEnv("batch", "maxAmount")
 
 
 	// Try to read configuration from config file. If config file
@@ -93,13 +86,6 @@ func NewClientConfig(v *viper.Viper) *common.ClientConfig {
 	config := &common.ClientConfig{
 		ServerAddress: v.GetString("server.address"),
 		ID:            v.GetString("id"),
-		BetInfo: protocol.PersonBet{
-			Name:    v.GetString("info.name"),
-			Surname: v.GetString("info.surname"),
-			Dni:     int32(v.GetInt("info.dni")),
-			Birth:   v.GetString("info.birth"),
-			Number:  int32(v.GetInt("info.number")),
-		},
 	}
 
 	return config
@@ -108,11 +94,11 @@ func NewClientConfig(v *viper.Viper) *common.ClientConfig {
 // PrintConfig Print all the configuration parameters of the program.
 // For debugging purposes only
 func PrintConfig(v *viper.Viper, conf *common.ClientConfig) {
-	log.Infof("action: config | result: success | client_id: %s | server_address: %s  | log_level: %s | %s",
+	log.Infof("action: config | result: success | client_id: %s | server_address: %s  | log_level: %s | max_ammount: %v",
 		conf.ID,
 		conf.ServerAddress,
-		v.GetString("log.level"),		
-		conf.BetInfo,
+		v.GetString("log.level"),
+		v.GetInt("batch.maxAmount"),
 	)
 }
 

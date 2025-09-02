@@ -1,13 +1,6 @@
 
 import sys,os
 
-
-CLIENT_NAME="Santiago Lionel"
-CLIENT_SURNAME="Lorca"
-CLIENT_DNI=30904465
-CLIENT_BIRTH="1999-03-17"
-#CLIENT_NUMERO=7574
-
 def read_base():
 	with open("compose_templates/docker-compose-base-dev.yaml", "r") as f:
 		return f.read()
@@ -24,11 +17,6 @@ def configure_client(base, ind, config_file, agency_file):
 	return base.format(ID = str_ind
 	  , CONFIG_FILE=config_file 
 	  , AGENCY_FILE = agency_file
-	  , INFO_NAME=CLIENT_NAME+"_"+str_ind
-      , INFO_SURNAME=CLIENT_SURNAME
-      , INFO_DNI=CLIENT_DNI+ind
-      , INFO_BIRTH=CLIENT_BIRTH
-      , INFO_NUMBER=ind
 		)
 
 
