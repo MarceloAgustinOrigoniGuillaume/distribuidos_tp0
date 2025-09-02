@@ -62,7 +62,7 @@ class Server:
 
             bet = utils.Bet(agency, bet.first_name, bet.last_name, str(bet.document), bet.birthdate, str(bet.number))
             utils.store_bets([bet])
-
+            logging.info(f"action: apuesta_almacenada | result: success | dni: {bet.document} | numero: ${bet.number}")
         except Exception as e:
             logging.error(f"action: receive_bet | result: fail | error: {e}")
         finally:
