@@ -1,6 +1,6 @@
 import socket
 import logging
-
+import threading
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -8,6 +8,23 @@ class Server:
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
+        self._running = True
+
+        self.active_connection =None # Needed to force shutdown of current connection.
+
+    def stop(self):
+        # Is not async as it is on go or other languages. No need for synchronization.
+        logging.info(f'server exiting run loop.')
+        self._running = False
+        
+        self._server_socket.close()
+
+        # For now the handling of active connections is not synchronized/locked since
+        # at worst it closes the active connection twice. Not worth the overhead of locking.
+        if self.active_connection:
+            self.active_connection.close()
+
+
 
     def run(self):
         """
@@ -18,11 +35,16 @@ class Server:
         finishes, servers starts to accept new connections again
         """
 
-        # TODO: Modify this program to handle signal to graceful shutdown
-        # the server
-        while True:
-            client_sock = self.__accept_new_connection()
-            self.__handle_client_connection(client_sock)
+        while self._running:
+            try:
+                client_sock = self.__accept_new_connection()
+                self.__handle_client_connection(client_sock)
+            except OSError as e:
+                if self._running:
+                    logging.error("action: listen_message | result: fail | error: {e}")
+
+
+        logging.info(f'server exited run loop.')
 
     def __handle_client_connection(self, client_sock):
         """
@@ -41,7 +63,11 @@ class Server:
         except OSError as e:
             logging.error("action: receive_message | result: fail | error: {e}")
         finally:
-            client_sock.close()
+            # In the future it would be needed locking. Now its overkill
+            if self._running:
+                self.active_connection = None
+                client_sock.close()
+
 
     def __accept_new_connection(self):
         """
@@ -55,4 +81,11 @@ class Server:
         logging.info('action: accept_connections | result: in_progress')
         c, addr = self._server_socket.accept()
         logging.info(f'action: accept_connections | result: success | ip: {addr[0]}')
+
+        self.active_connection = c
+
+        if not self._running:
+            self.active_connection = None
+            c.close()
+            raise OSError("Finished server after accepting connection")
         return c
