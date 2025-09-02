@@ -93,7 +93,6 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 		}
 
 		log.Infof("action: apuesta_enviada | result: success | %s",
-			c.config.ID,
 			c.config.BetInfo.MainInfo(),
 		)
 }
