@@ -77,14 +77,14 @@ func (protocol *ClientProtocol) sendLen(len uint16) error {
 	return protocol.sendBytes(lenBuf)
 }
 
-func (protocol *ClientProtocol) sendInt(value int32) error {
+func (protocol *ClientProtocol) SendInt(value int32) error {
 	buf := make([]byte, 4)
 	binary.BigEndian.PutUint32(buf, uint32(value)) // Have it be big endian.
 	return protocol.sendBytes(buf)
 }
 
 // Send first the quantity of bytes in the string. Then the string.
-func (protocol *ClientProtocol) sendStr(value string) error {
+func (protocol *ClientProtocol) SendStr(value string) error {
 	strBytes := []byte(value)
 
 	if err := protocol.sendLen(uint16(len(strBytes))); err != nil {
@@ -106,11 +106,11 @@ func (protocol *ClientProtocol) SendBet(bet *PersonBet) error {
 		return err == nil
 	}
 	
-	if (send(protocol.sendStr(bet.Name)) &&
-		send(protocol.sendStr(bet.Surname)) &&	
-		send(protocol.sendInt(bet.Dni))	&&
-		send(protocol.sendStr(bet.Birth)) &&	
-		send(protocol.sendInt(bet.Number))){
+	if (send(protocol.SendStr(bet.Name)) &&
+		send(protocol.SendStr(bet.Surname)) &&	
+		send(protocol.SendInt(bet.Dni))	&&
+		send(protocol.SendStr(bet.Birth)) &&	
+		send(protocol.SendInt(bet.Number))){
 		return nil
 	}
 

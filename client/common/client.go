@@ -72,7 +72,11 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 		default: // Continue
 		}
 
-		err := c.protocol.SendBet(&c.config.BetInfo)
+		err:= c.protocol.SendStr(c.config.ID)
+		if err == nil {
+			err = c.protocol.SendBet(&c.config.BetInfo)
+		}
+		
 		if err != nil {
 			select {
 			case <-ctx.Done():

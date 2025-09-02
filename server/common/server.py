@@ -1,6 +1,8 @@
 import socket
 import logging
 import threading
+from .server_protocol import ServerProtocol 
+from . import utils 
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -54,13 +56,14 @@ class Server:
         client socket will also be closed
         """
         try:
-            # TODO: Modify the receive to avoid short-reads
-            msg = client_sock.recv(1024).rstrip().decode('utf-8')
-            addr = client_sock.getpeername()
-            logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
-            # TODO: Modify the send to avoid short-writes
-            client_sock.send("{}\n".format(msg).encode('utf-8'))
-        except OSError as e:
+            agency = client_sock.recv_str()
+
+            bet = client_sock.recv_bet()
+
+            bet = utils.Bet(agency, bet.first_name, bet.last_name, str(bet.document), bet.birthdate, str(bet.number))
+            utils.store_bets([bet])
+
+        except Exception as e:
             logging.error("action: receive_message | result: fail | error: {e}")
         finally:
             # In the future it would be needed locking. Now its overkill
@@ -82,6 +85,7 @@ class Server:
         c, addr = self._server_socket.accept()
         logging.info(f'action: accept_connections | result: success | ip: {addr[0]}')
 
+        c = ServerProtocol(c)
         self.active_connection = c
 
         if not self._running:
