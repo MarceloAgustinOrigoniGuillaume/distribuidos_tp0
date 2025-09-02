@@ -13,7 +13,7 @@ class ServerProtocol:
     def __init__(self, conn: socket.socket):
         self._conn = conn
 
-    def recv_bytes(self, size):
+    def _recv_bytes(self, size):
         buf = b""
 
         while len(buf) < size:

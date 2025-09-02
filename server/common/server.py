@@ -64,7 +64,7 @@ class Server:
             utils.store_bets([bet])
 
         except Exception as e:
-            logging.error("action: receive_message | result: fail | error: {e}")
+            logging.error(f"action: receive_bet | result: fail | error: {e}")
         finally:
             # In the future it would be needed locking. Now its overkill
             if self._running:

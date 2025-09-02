@@ -21,8 +21,8 @@ def read_client():
 # Client config on docker compose instead of .env files to make it easier to configure
 def configure_client(base, ind, config_file):
 	str_ind = str(ind)
-	return base.format(ID = str_ind,
-	 	CONFIG_FILE=config_file, 
+	return base.format(ID = str_ind
+	  , CONFIG_FILE=config_file 
 	  , INFO_NAME={CLIENT_NAME+"_"+str_ind}
       , INFO_SURNAME={CLIENT_SURNAME}
       , INFO_DNI={CLIENT_DNI+ind}
