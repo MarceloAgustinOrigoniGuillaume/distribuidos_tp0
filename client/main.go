@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common"
+	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/protocol"
 )
 
 var log = logging.MustGetLogger("log")
@@ -38,9 +39,15 @@ func InitConfig() (*viper.Viper, error) {
 	// Add env variables supported
 	v.BindEnv("id")
 	v.BindEnv("server", "address")
-	v.BindEnv("loop", "period")
-	v.BindEnv("loop", "amount")
 	v.BindEnv("log", "level")
+
+	// Not desirable to add all allowed vars here. But well. For now its the most clean
+	v.BindEnv("info.name", "INFO_NAME")
+	v.BindEnv("info.surname", "INFO_SURNAME")
+	v.BindEnv("info.dni", "INFO_DNI")
+	v.BindEnv("info.birth", "INFO_BIRTH")
+	v.BindEnv("info.number", "INFO_NUMBER")
+
 
 	// Try to read configuration from config file. If config file
 	// does not exists then ReadInConfig will fail but configuration
@@ -82,15 +89,30 @@ func InitLogger(logLevel string) error {
 	return nil
 }
 
+func NewClientConfig(v *viper.Viper) *common.ClientConfig {
+	config := &common.ClientConfig{
+		ServerAddress: v.GetString("server.address"),
+		ID:            v.GetString("id"),
+		BetInfo: protocol.PersonBet{
+			Name:    v.GetString("info.name"),
+			Surname: v.GetString("info.surname"),
+			Dni:     int32(v.GetInt("info.dni")),
+			Birth:   v.GetString("info.birth"),
+			Number:  int32(v.GetInt("info.number")),
+		},
+	}
+
+	return config
+}
+
 // PrintConfig Print all the configuration parameters of the program.
 // For debugging purposes only
-func PrintConfig(v *viper.Viper) {
-	log.Infof("action: config | result: success | client_id: %s | server_address: %s | loop_amount: %v | loop_period: %v | log_level: %s",
-		v.GetString("id"),
-		v.GetString("server.address"),
-		v.GetInt("loop.amount"),
-		v.GetDuration("loop.period"),
-		v.GetString("log.level"),
+func PrintConfig(v *viper.Viper, conf *common.ClientConfig) {
+	log.Infof("action: config | result: success | client_id: %s | server_address: %s  | log_level: %s | %s",
+		conf.ID,
+		conf.ServerAddress,
+		v.GetString("log.level"),		
+		conf.BetInfo,
 	)
 }
 
@@ -105,16 +127,11 @@ func main() {
 		log.Criticalf("%s", err)
 	}
 
+
+	clientConfig := NewClientConfig(v)
+
 	// Print program config with debugging purposes
-	PrintConfig(v)
-
-	clientConfig := common.ClientConfig{
-		ServerAddress: v.GetString("server.address"),
-		ID:            v.GetString("id"),
-		LoopAmount:    v.GetInt("loop.amount"),
-		LoopPeriod:    v.GetDuration("loop.period"),
-	}
-
+	PrintConfig(v, clientConfig)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -123,7 +140,7 @@ func main() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT)
 
-	client := common.NewClient(clientConfig)
+	client := common.NewClient(*clientConfig)
 
 	go func() {
 	    <-sigChan

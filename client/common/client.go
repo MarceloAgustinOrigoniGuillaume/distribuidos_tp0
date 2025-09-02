@@ -1,12 +1,9 @@
 package common
 
 import (
-	"bufio"
-	"fmt"
-	"net"
-	"time"
 	"sync"
 	"context"
+	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/protocol"
 
 	"github.com/op/go-logging"
 )
@@ -17,14 +14,17 @@ var log = logging.MustGetLogger("log")
 type ClientConfig struct {
 	ID            string
 	ServerAddress string
-	LoopAmount    int	
-	LoopPeriod    time.Duration
+	BetInfo protocol.PersonBet
 }
+
+
+
+
 
 // Client Entity that encapsulates how
 type Client struct {
 	config ClientConfig
-	conn   net.Conn
+	protocol   *protocol.ClientProtocol
 	lock     sync.Mutex // Needed since we dont know when the sigterm signal might come.	
 }
 
@@ -41,7 +41,10 @@ func NewClient(config ClientConfig) *Client {
 // failure, error is printed in stdout/stderr and exit 1
 // is returned
 func (c *Client) createClientSocket() error {
-	conn, err := net.Dial("tcp", c.config.ServerAddress)
+
+
+	prot, err := protocol.NewClientProtocol(c.config.ServerAddress)
+
 	if err != nil {
 		log.Criticalf(
 			"action: connect | result: fail | client_id: %v | error: %v",
@@ -49,43 +52,35 @@ func (c *Client) createClientSocket() error {
 			err,
 		)
 	}
+
 	c.lock.Lock()
     defer c.lock.Unlock()	
-	c.conn = conn
+	c.protocol = prot
 	return nil
 }
 
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop(ctx context.Context) {
-	// There is an autoincremental msgID to identify every message sent
-	// Messages if the message amount threshold has not been surpassed
-	for msgID := 1; msgID <= c.config.LoopAmount; msgID++ {
-		// Create the connection the server in every loop iteration. Send an
+			 
 		c.createClientSocket()
+		defer c.StopClient(); // Stop always since we dont really check/want to check wether it was already closed.
+		
 		select {
 		case <-ctx.Done():
-			c.StopClient(); // Stop again since we dont know for sure IF the close was to this socket.
 			log.Infof("action: loop_cancel | result: success | client_id: %v", c.config.ID)
 			return
 		default: // Continue
 		}
-		// TODO: Modify the send to avoid short-write
-		fmt.Fprintf(
-			c.conn,
-			"[CLIENT %v] Message N°%v\n",
-			c.config.ID,
-			msgID,
-		)
-		msg, err := bufio.NewReader(c.conn).ReadString('\n')
-		c.conn.Close()
 
+		err := c.protocol.SendBet(&c.config.BetInfo)
 		if err != nil {
 			select {
 			case <-ctx.Done():
-				log.Infof("action: loop_cancel | result: success | client_id: %v", c.config.ID)
+				log.Infof("action: bet_send_cancel | result: success | client_id: %v", c.config.ID)
 			default:
-				log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
+				log.Errorf("action: apuesta_enviada | result: fail | client_id: %v | %s | error: %s",
 					c.config.ID,
+					c.config.BetInfo,					
 					err,
 				)				
 			}
@@ -93,21 +88,10 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 			return
 		}
 
-		log.Infof("action: receive_message | result: success | client_id: %v | msg: %v",
+		log.Infof("action: apuesta_enviada | result: success | %s",
 			c.config.ID,
-			msg,
+			c.config.BetInfo.MainInfo(),
 		)
-
-		// Wait a time between sending one message and the next one
-		select {
-		case <-ctx.Done():
-			log.Infof("action: loop_cancel | result: success | client_id: %v", c.config.ID)
-			return
-		case <-time.After(c.config.LoopPeriod):
-		}
-
-	}
-	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
 }
 
 
@@ -115,8 +99,8 @@ func (c *Client) StopClient() {
 	c.lock.Lock()
     defer c.lock.Unlock()	
 
-	if c.conn != nil {
-		if err := c.conn.Close(); err != nil {
+	if c.protocol != nil {
+		if err := c.protocol.Close(); err != nil {
 			// Already closed?
 		} else {
 			log.Infof("client %v: connection closed", c.config.ID)

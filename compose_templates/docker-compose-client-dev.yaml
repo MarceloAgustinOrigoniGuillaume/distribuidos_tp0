@@ -4,6 +4,11 @@
     entrypoint: /client
     environment:
       - CLI_ID={ID}
+      - INFO_NAME={NAME}
+      - INFO_SURNAME={SURNAME}
+      - INFO_DNI={DNI}
+      - INFO_BIRTH={BIRTH}
+      - INFO_NUMBER={NUMBER}
     networks:
       - testing_net
     depends_on:

@@ -2,6 +2,12 @@
 import sys,os
 
 
+CLIENT_NAME="Santiago Lionel"
+CLIENT_SURNAME="Lorca"
+CLIENT_DNI=30904465
+CLIENT_BIRTH="1999-03-17"
+#CLIENT_NUMERO=7574
+
 def read_base():
 	with open("compose_templates/docker-compose-base-dev.yaml", "r") as f:
 		return f.read()
@@ -12,8 +18,17 @@ def read_client():
 		return f.read()
 
 
+# Client config on docker compose instead of .env files to make it easier to configure
 def configure_client(base, ind, config_file):
-	return base.format(ID = str(ind), CONFIG_FILE=config_file)
+	str_ind = str(ind)
+	return base.format(ID = str_ind,
+	 	CONFIG_FILE=config_file, 
+	  , INFO_NAME={CLIENT_NAME+"_"+str_ind}
+      , INFO_SURNAME={CLIENT_SURNAME}
+      , INFO_DNI={CLIENT_DNI+ind}
+      , INFO_BIRTH={CLIENT_BIRTH}
+      , INFO_NUMBER={ind}
+		)
 
 
 def trim_initial_base(out, base, server_config_file):
