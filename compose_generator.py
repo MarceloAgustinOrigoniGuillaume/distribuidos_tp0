@@ -57,7 +57,7 @@ if __name__ == "__main__":
 		base = trim_initial_base(out, base, server_config_file)
 
 		for i in range(1, clients_count+1):
-			client_agency_file = os.path.join(ROOT_DIR, ".data", "dataset",f"agency-{i}.csv")
+			client_agency_file = os.path.join(ROOT_DIR, ".data",f"agency-{i}.csv")
 
 			out.write(configure_client(client_base, i, client_config_file, client_agency_file))
 		out.write(base)
