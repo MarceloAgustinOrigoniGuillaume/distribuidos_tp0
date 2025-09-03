@@ -73,6 +73,7 @@ class Server:
             logging.error(f"action: receive_bet_count | result: fail | error: {e}")
             return
         total = 0
+        received = 0
 
         try:
             count = client_sock._recv_int32() # Count of bets in batch
@@ -82,10 +83,11 @@ class Server:
                 logging.info(f"action: client batch recv init | result: success | agency: {agency} | count bets {count}")
 
                 res =[]
-
+                received = 0
                 for i in range(count):
                     bet = client_sock.recv_bet()
                     res.append(utils.Bet(agency, bet.first_name, bet.last_name, str(bet.document), bet.birthdate, str(bet.number)))
+                    received+=1
 
                 utils.store_bets(res)
 
@@ -99,7 +101,7 @@ class Server:
 
         except Exception as e:
             logging.error(f"action: apuesta_recibida | result: fail | cantidad: {count}")
-            logging.error(f"total recv {total} error: {e}")
+            logging.error(f"total bets recv {total} , batch recv {received} of {count} error: {e}")
 
             #Send response, possible IO error handled by invoker
             client_sock.send_int32(ERROR_CODE)

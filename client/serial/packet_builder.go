@@ -9,6 +9,7 @@ import (
 const HARD_LIMIT = 8 * 1024; // Limit in bytes for batch size. 
 
 const ALL_OK_CODE = 0; // All ok code, batch sent properly.
+const FINISH_FLAG = 0; // Finish flag== count of 0 bets
 
 // PacketBuilder handles the logic/constraints on Packets, like the hard limit on the packet size.
 type PacketBuilder struct {
@@ -39,6 +40,15 @@ func (builder *PacketBuilder) reset() {
 		builder.cached = builder.cached[:0]
 	}	
 }
+func (builder *PacketBuilder) SendFinish(conn *ClientConnection) error {
+
+
+	builder.serializer.WriteInt(FINISH_FLAG)
+	defer builder.serializer.Clear()	
+
+	// In the future wait for winner or so.
+	return conn.Send(builder.serializer)
+}
 
 func (builder *PacketBuilder) SendPacket(count int32, conn *ClientConnection) error {
 
@@ -51,7 +61,7 @@ func (builder *PacketBuilder) SendPacket(count int32, conn *ClientConnection) er
 	defer builder.serializer.Clear()
 
 	// Send len
-	err:= conn.SendBytes(builder.serializer.GetData())
+	err:= conn.Send(builder.serializer)
 	if err != nil{
 		return err
 	}

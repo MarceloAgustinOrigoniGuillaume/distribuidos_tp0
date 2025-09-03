@@ -159,6 +159,15 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 			}
 		}
 
+		if count == 0 {
+			err= packetBuilder.SendFinish(c.conn)
+
+			if !c.checkContinue(ctx, "Finish send", err){
+				log.Infof("action: failed finish send bets | total sent: %d", total)
+				return
+			}
+		}
+
 		log.Infof("action: finished sending bets | total sent: %d", total)
 
 }
