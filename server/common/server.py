@@ -132,7 +132,7 @@ class Server:
                 client_sock.send_int32(ALL_OK) 
                 count = client_sock._recv_int32() # Count of bets in batch
 
-            self.awaiting_agencies[agency] = Agency(client_sock)
+            self.awaiting_agencies[int(agency)] = Agency(client_sock)
             logging.info(f"action: recv_agency_bets | result: success | agency: {agency} | count_bets: {total}")
             return True
 
