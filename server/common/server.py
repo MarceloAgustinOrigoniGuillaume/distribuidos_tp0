@@ -6,7 +6,6 @@ from . import utils
 
 ALL_OK = 0
 ERROR_CODE = 1
-AGENCY_COUNT = 5
 WINNERS_EOF = -1
 
 class Agency:
@@ -24,12 +23,13 @@ class Agency:
         self.conn.close()
 
 class Server:
-    def __init__(self, port, listen_backlog):
+    def __init__(self, port, listen_backlog, agency_count):
         # Initialize server socket
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
         self._running = True
+        self.agency_count = agency_count
 
         self.active_connection =None # Needed to force shutdown of current connection.
 
@@ -68,7 +68,7 @@ class Server:
                 
                 if self.__handle_client_connection(client_sock):
                     awaiting_count+=1
-                    if awaiting_count == AGENCY_COUNT:
+                    if awaiting_count == self.agency_count:
                         winning_bets = filter(utils.has_won, utils.load_bets())
 
                         # Since its not parallel it is not needed to group them by before sending them
@@ -78,11 +78,9 @@ class Server:
                         
                         for agency in self.awaiting_agencies.values():
                             agency.finished_winners()
+                            agency.close()
 
                         logging.info("action: sorteo | result: success")
-                        
-                        for agency in self.awaiting_agencies:
-                            agency.close()
 
                 elif self._running:
                     self.active_connection = None

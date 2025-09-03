@@ -20,10 +20,10 @@ def configure_client(base, ind, config_file, agency_file):
 		)
 
 
-def trim_initial_base(out, base, server_config_file):
+def trim_initial_base(out, base, server_config_file, clients_count):
 
 	parts = base.split("$CLIENTS", 1) # max split = 1
-	out.write(parts[0].format(SERVER_CONFIG_FILE=server_config_file))
+	out.write(parts[0].format(SERVER_CONFIG_FILE=server_config_file, CLIENT_COUNT = clients_count))
 	return parts[1]
 
 if __name__ == "__main__":
@@ -54,7 +54,7 @@ if __name__ == "__main__":
 	base = read_base()
 	client_base = read_client()
 	with open(file_out, "w+") as out:
-		base = trim_initial_base(out, base, server_config_file)
+		base = trim_initial_base(out, base, server_config_file, clients_count)
 
 		for i in range(1, clients_count+1):
 			client_agency_file = os.path.join(ROOT_DIR, ".data",f"agency-{i}.csv")
