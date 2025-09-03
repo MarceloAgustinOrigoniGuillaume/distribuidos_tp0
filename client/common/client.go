@@ -168,7 +168,7 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 			}
 		}
 
-		log.Infof("action: finished_sending_bets | result: success | total_sent: %d", total)
+		log.Infof("action: exit | result: success | total_sent: %d", total)
 
 }
 

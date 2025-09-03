@@ -97,7 +97,7 @@ class Server:
                 count = client_sock._recv_int32() # Count of bets in batch
             
 
-            logging.info(f"action: client_connection_finished | result: success | agency: {agency} | count_bets: {total}")
+            logging.info(f"action: exit_server | result: success | agency: {agency} | count_bets: {total}")
 
         except Exception as e:
             logging.error(f"action: apuesta_recibida | result: fail | cantidad: {count}")
