@@ -20,7 +20,7 @@ class Server:
 
     def stop(self):
         # Is not async as it is on go or other languages. No need for synchronization.
-        logging.info(f'server exiting run loop.')
+        logging.info(f'action: server_exiting_run_loop. | result: in_progress')
         self._running = False
         
         self._server_socket.close()
@@ -55,7 +55,7 @@ class Server:
                     logging.error(f"action: client handler | result: fail | error: {e}")
 
 
-        logging.info(f'server exited run loop.')
+        logging.info(f'action: server_exited_run_loop. | result: success')
 
     def __handle_client_connection(self, client_sock):
         """
@@ -97,7 +97,7 @@ class Server:
                 count = client_sock._recv_int32() # Count of bets in batch
             
 
-            logging.info(f"action: client connection finished | result: success | agency: {agency} | count bets {total}")
+            logging.info(f"action: client_connection_finished | result: success | agency: {agency} | count_bets: {total}")
 
         except Exception as e:
             logging.error(f"action: apuesta_recibida | result: fail | cantidad: {count}")
