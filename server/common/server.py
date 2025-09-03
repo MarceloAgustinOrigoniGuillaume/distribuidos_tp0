@@ -20,6 +20,9 @@ class Agency:
     def finished_winners(self):
         self.conn.send_int32(WINNERS_EOF)
 
+    def close(self):
+        self.conn.close()
+
 class Server:
     def __init__(self, port, listen_backlog):
         # Initialize server socket
@@ -44,6 +47,9 @@ class Server:
         # at worst it closes the active connection twice. Not worth the overhead of locking.
         if self.active_connection:
             self.active_connection.close()
+
+        for agency in self.awaiting_agencies:
+            agency.close()
 
 
 
@@ -74,6 +80,9 @@ class Server:
                             agency.finished_winners()
 
                         logging.info("action: sorteo | result: success")
+                        
+                        for agency in self.awaiting_agencies:
+                            agency.close()
 
                 elif self._running:
                     self.active_connection = None
