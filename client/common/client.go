@@ -163,12 +163,12 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 			err= packetBuilder.SendFinish(c.conn)
 
 			if !c.checkContinue(ctx, "Finish send", err){
-				log.Infof("action: failed_finish_send_bets | total_sent: %d", total)
+				log.Infof("action: failed_finish_send_bets | result: success | total_sent: %d", total)
 				return
 			}
 		}
 
-		log.Infof("action: finished_sending_bets | total_sent: %d", total)
+		log.Infof("action: finished_sending_bets | result: success | total_sent: %d", total)
 
 }
 
@@ -181,7 +181,7 @@ func (c *Client) StopClient() {
 		if err := c.conn.Close(); err != nil {
 			// Already closed?
 		} else {
-			log.Infof("action: close_client | client_id: %v", c.config.ID)
+			log.Infof("action: close_client | result: success | client_id: %v", c.config.ID)
 		}
 	} else { // Should not really happen but just in case.
 		log.Debugf("client %v: no connection to close", c.config.ID)
@@ -192,7 +192,7 @@ func (c *Client) StopClient() {
 		if err := c.betReader.Close(); err != nil {
 			// Already closed?
 		} else {
-			log.Infof("action: close_reader | client_id: %v", c.config.ID)
+			log.Infof("action: close_reader | result: success | client_id: %v", c.config.ID)
 		}		
 		
 	}
