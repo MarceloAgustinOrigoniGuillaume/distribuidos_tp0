@@ -6,7 +6,19 @@ from . import utils
 
 ALL_OK = 0
 ERROR_CODE = 1
+AGENCY_COUNT = 5
+WINNERS_EOF = -1
 
+class Agency:
+    def __init__(self, connection):
+        self.conn = connection
+
+    def notify_winner(self, bet):
+        self.conn.send_int32(bet.number)
+        self.conn.send_str(bet.document)
+
+    def finished_winners(self):
+        self.conn.send_int32(WINNERS_EOF)
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -17,6 +29,9 @@ class Server:
         self._running = True
 
         self.active_connection =None # Needed to force shutdown of current connection.
+
+        # Agency is actually a number, but to make it more flexible it will be used a hashmap
+        self.awaiting_agencies = {}
 
     def stop(self):
         # Is not async as it is on go or other languages. No need for synchronization.
@@ -40,16 +55,30 @@ class Server:
         communication with a client. After client with communucation
         finishes, servers starts to accept new connections again
         """
-
+        awaiting_count = 0
         while self._running:
             try:
                 client_sock = self.__accept_new_connection()
-                self.__handle_client_connection(client_sock)
+                
+                if self.__handle_client_connection(client_sock):
+                    awaiting_count+=1
+                    if awaiting_count == AGENCY_COUNT:
+                        winning_bets = filter(utils.has_won, utils.load_bets())
 
-                # In the future it would be needed locking. Now its overkill
-                if self._running:
+                        # Since its not parallel it is not needed to group them by before sending them
+                        for bet in winning_bets:
+                            self.awaiting_agencies[bet.agency].notify_winner(bet)
+                        
+                        
+                        for agency in self.awaiting_agencies.values():
+                            agency.finished_winners()
+
+                        logging.info("action: sorteo | result: success")
+
+                elif self._running:
                     self.active_connection = None
-                    client_sock.close()                
+                    client_sock.close()
+
             except OSError as e:
                 if self._running:
                     logging.error(f"action: client handler | result: fail | error: {e}")
@@ -71,7 +100,7 @@ class Server:
 
         except Exception as e:
             logging.error(f"action: receive_bet_count | result: fail | error: {e}")
-            return
+            return False
         total = 0
         received = 0
 
@@ -95,9 +124,10 @@ class Server:
                 logging.info(f"action: apuesta_recibida | result: success | cantidad: {count}")
                 client_sock.send_int32(ALL_OK) 
                 count = client_sock._recv_int32() # Count of bets in batch
-            
 
-            logging.info(f"action: exit_server | result: success | agency: {agency} | count_bets: {total}")
+            self.awaiting_agencies[agency] = Agency(client_sock)
+            logging.info(f"action: recv_agency_bets | result: success | agency: {agency} | count_bets: {total}")
+            return True
 
         except Exception as e:
             logging.error(f"action: apuesta_recibida | result: fail | cantidad: {count}")
@@ -107,7 +137,7 @@ class Server:
             client_sock.send_int32(ERROR_CODE)
             client_sock.send_str(f"{e}")
 
-            return
+            return False
 
 
     def __accept_new_connection(self):

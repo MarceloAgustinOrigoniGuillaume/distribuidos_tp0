@@ -9,6 +9,11 @@ import (
 )
 
 var log = logging.MustGetLogger("log")
+const WINNERS_EOF = int32(-1)
+type BetWinner struct {
+	Dni string
+	number int32
+}
 
 // ClientConfig Configuration used by the client
 type ClientConfig struct {
@@ -166,9 +171,32 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 				log.Infof("action: failed_finish_send_bets | result: success | total_sent: %d", total)
 				return
 			}
-		}
 
-		log.Infof("action: exit | result: success | total_sent: %d", total)
+			// Can be a winning number, or -1 If no more winners.
+			num,  errNum := c.conn.ReadInt()
+			winners := make([]BetWinner, 0,5)
+
+			for c.checkContinue(ctx, "Receive winner number", errNum) && num != WINNERS_EOF{
+				dni, errDni := c.conn.ReadStr()
+				if (!c.checkContinue(ctx, "Receive winner dni", errDni)){
+					return
+				}
+				winners = append(winners, BetWinner {
+					Dni: dni,
+					number: num,
+				})
+				num, errNum = c.conn.ReadInt()
+			}
+			
+
+			log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %d", len(winners))
+			for i, winner := range winners {
+			    log.Infof("action: winner_recv | result: success | Winner: %d | dni: %s",i,winner.Dni)
+			}
+
+		} else{
+			log.Infof("action: exit | result: success | total_sent: %d", total)
+		}
 
 }
 
