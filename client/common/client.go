@@ -67,7 +67,7 @@ func (c *Client) createClientReader() error {
 	betReader, err := serial.NewBetReader(c.config.BatchSize, c.config.BetsCSV)
 
 	if err != nil {
-		log.Errorf("action: open bets file | result: fail | client_id: %v | error: %s",
+		log.Errorf("action: open_bets_file | result: fail | client_id: %v | error: %s",
 				c.config.ID,
 				err,
 			)
@@ -137,7 +137,7 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 
 		select {
 		case <-ctx.Done():
-			log.Infof("action: loop_cance at read first batch | result: success | client_id: %v", c.config.ID)
+			log.Infof("action: send_cancel_at_read_first_batch | result: success | client_id: %v", c.config.ID)
 			return
 		default: // Continue
 		}	
@@ -145,7 +145,7 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 		count, err := c.betReader.YieldBatch(packetBuilder)
 
 		for count > 0 && c.checkContinue(ctx, "Read of batch", err) {
-			log.Infof("action: loaded %d bets | result: success", count)
+			log.Infof("action: load_%d_bets | result: success", count)
 			// We need to check for err != nil after reading batch and after sending the packet.
 			err = packetBuilder.SendPacket(count, c.conn)
 
@@ -163,12 +163,12 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 			err= packetBuilder.SendFinish(c.conn)
 
 			if !c.checkContinue(ctx, "Finish send", err){
-				log.Infof("action: failed finish send bets | total sent: %d", total)
+				log.Infof("action: failed_finish_send_bets | total_sent: %d", total)
 				return
 			}
 		}
 
-		log.Infof("action: finished sending bets | total sent: %d", total)
+		log.Infof("action: finished_sending_bets | total_sent: %d", total)
 
 }
 
@@ -181,7 +181,7 @@ func (c *Client) StopClient() {
 		if err := c.conn.Close(); err != nil {
 			// Already closed?
 		} else {
-			log.Infof("client %v: connection closed", c.config.ID)
+			log.Infof("action: close_client | client_id: %v", c.config.ID)
 		}
 	} else { // Should not really happen but just in case.
 		log.Debugf("client %v: no connection to close", c.config.ID)
@@ -192,7 +192,7 @@ func (c *Client) StopClient() {
 		if err := c.betReader.Close(); err != nil {
 			// Already closed?
 		} else {
-			log.Infof("client %v: reader closed", c.config.ID)
+			log.Infof("action: close_reader | client_id: %v", c.config.ID)
 		}		
 		
 	}
