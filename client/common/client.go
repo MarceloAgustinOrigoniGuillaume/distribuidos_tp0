@@ -3,7 +3,7 @@ package common
 import (
 	"sync"
 	"context"
-	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/protocol"
+	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/serial"
 
 	"github.com/op/go-logging"
 )
@@ -14,6 +14,8 @@ var log = logging.MustGetLogger("log")
 type ClientConfig struct {
 	ID            string
 	ServerAddress string
+	BetsCSV string
+	BatchSize int32
 }
 
 
@@ -23,7 +25,8 @@ type ClientConfig struct {
 // Client Entity that encapsulates how
 type Client struct {
 	config ClientConfig
-	protocol   *protocol.ClientProtocol
+	conn   *serial.ClientConnection
+	betReader *serial.BetReader
 	lock     sync.Mutex // Needed since we dont know when the sigterm signal might come.	
 }
 
@@ -42,7 +45,7 @@ func NewClient(config ClientConfig) *Client {
 func (c *Client) createClientSocket() error {
 
 
-	prot, err := protocol.NewClientProtocol(c.config.ServerAddress)
+	conn, err := serial.NewClientConnection(c.config.ServerAddress)
 
 	if err != nil {
 		log.Criticalf(
@@ -50,58 +53,96 @@ func (c *Client) createClientSocket() error {
 			c.config.ID,
 			err,
 		)
+		return err
 	}
 
 	c.lock.Lock()
     defer c.lock.Unlock()	
-	c.protocol = prot
+	c.conn = conn
 	return nil
+}
+
+func (c *Client) createClientReader() error {
+
+	betReader, err := serial.NewBetReader(c.config.BatchSize, c.config.BetsCSV)
+
+	if err != nil {
+		log.Errorf("action: open bets file | result: fail | client_id: %v | error: %s",
+				c.config.ID,
+				err,
+			)
+		return err
+	}
+
+
+	c.lock.Lock()
+    defer c.lock.Unlock()	
+	c.betReader = betReader
+
+	return nil
+}
+
+
+func (c *Client) checkContinue(ctx context.Context, msg string, err error) bool {
+	
+	select {
+	case <-ctx.Done():
+		log.Infof("action: loop_cancel after %s | result: success | client_id: %v", msg, c.config.ID)
+		return false
+	default: // Continue
+	}	
+
+	if err != nil {
+		log.Errorf("action: %s | result: fail | client_id: %v | error: %s",
+			msg,
+			c.config.ID,
+			err,
+		)	
+		return false
+	}
+
+	return true
 }
 
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop(ctx context.Context) {
 			 
-		c.createClientSocket()
+		if (c.createClientSocket() != nil) { // Abort client If connection failed.
+			return
+		}
+
 		defer c.StopClient(); // Stop always since we dont really check/want to check wether it was already closed.
-		
+
+		if (c.createClientReader() != nil) { // Abort client If reader failed.
+			return
+		}
+
+		packetBuilder:= serial.NewPacketBuilder()
+
 		select {
 		case <-ctx.Done():
-			log.Infof("action: loop_cancel | result: success | client_id: %v", c.config.ID)
+			log.Infof("action: loop_cance at read first batch | result: success | client_id: %v", c.config.ID)
 			return
 		default: // Continue
-		}
+		}	
+		total:=int32(0)
+		count, err := c.betReader.YieldBatch(packetBuilder)
 
-		bet:= protocol.PersonBet {
-			Name: "Some name",
-			Surname: "Some surname",
-			Dni: 324,
-			Birth: "1999-03-17",
-			Number: 213,
-		}
+		for count > 0 && c.checkContinue(ctx, "Read of batch", err) {
+			log.Infof("action: loaded %d bets | result: success", count)
+			// We need to check for err != nil after reading batch and after sending the packet.
+			err = packetBuilder.SendPacket(count, c.conn)
 
-		err:= c.protocol.SendStr(c.config.ID)
-		if err == nil {
-			err = c.protocol.SendBet(&bet)
-		}
-		
-		if err != nil {
-			select {
-			case <-ctx.Done():
-				log.Infof("action: bet_send_cancel | result: success | client_id: %v", c.config.ID)
-			default:
-				log.Errorf("action: apuesta_enviada | result: fail | client_id: %v | %s | error: %s",
-					c.config.ID,
-					bet,					
-					err,
-				)				
+			
+			if c.checkContinue(ctx, "Send of batch", err) {
+				total+= count
+				log.Infof("action: send %d bets | result: success", count)
+				count, err = c.betReader.YieldBatch(packetBuilder)
 			}
-
-			return
 		}
 
-		log.Infof("action: apuesta_enviada | result: success | %s",
-			bet.MainInfo(),
-		)
+		log.Infof("action: finished sending bets | total sent: %d", count)
+
 }
 
 
@@ -109,13 +150,23 @@ func (c *Client) StopClient() {
 	c.lock.Lock()
     defer c.lock.Unlock()	
 
-	if c.protocol != nil {
-		if err := c.protocol.Close(); err != nil {
+	if c.conn != nil {
+		if err := c.conn.Close(); err != nil {
 			// Already closed?
 		} else {
 			log.Infof("client %v: connection closed", c.config.ID)
 		}
 	} else { // Should not really happen but just in case.
 		log.Debugf("client %v: no connection to close", c.config.ID)
+	}
+
+	if c.betReader != nil {
+
+		if err := c.betReader.Close(); err != nil {
+			// Already closed?
+		} else {
+			log.Infof("client %v: reader closed", c.config.ID)
+		}		
+		
 	}
 }

@@ -18,6 +18,8 @@ import (
 )
 
 var log = logging.MustGetLogger("log")
+const ConfigFile = "/usr/config.yaml"
+const BetsFile = "/usr/bets.csv"
 
 // InitConfig Function that uses viper library to parse configuration parameters.
 // Viper is configured to read variables from both environment variables and the
@@ -46,7 +48,7 @@ func InitConfig() (*viper.Viper, error) {
 	// does not exists then ReadInConfig will fail but configuration
 	// can be loaded from the environment variables so we shouldn't
 	// return an error in that case
-	v.SetConfigFile("/usr/config.yaml")
+	v.SetConfigFile(ConfigFile)
 	if err := v.ReadInConfig(); err != nil {
 		fmt.Printf("Configuration could not be read from config file. Using env variables instead")
 	}
@@ -86,6 +88,8 @@ func NewClientConfig(v *viper.Viper) *common.ClientConfig {
 	config := &common.ClientConfig{
 		ServerAddress: v.GetString("server.address"),
 		ID:            v.GetString("id"),
+		BetsCSV: BetsFile,
+		BatchSize: int32(v.GetInt("batch.maxAmount")),
 	}
 
 	return config
