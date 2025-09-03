@@ -80,7 +80,7 @@ class Server:
             while count > 0:
                 total+= count
 
-                logging.info(f"action: client batch recv init | result: success | agency: {agency} | count bets {count}")
+                logging.info(f"action: client_batch_recv_init | result: success | agency: {agency} | count_bets: {count}")
 
                 res =[]
                 received = 0
