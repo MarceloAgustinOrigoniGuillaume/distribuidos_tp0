@@ -104,6 +104,22 @@ func (c *Client) checkContinue(ctx context.Context, msg string, err error) bool 
 	return true
 }
 
+func (c *Client) initConnection() error {
+	builder:= serial.NewClientSerializer()
+	builder.WriteStr(c.config.ID)
+
+	err := c.conn.Send(builder)
+	if err != nil {
+		log.Errorf("action: connection init | result: fail | client_id: %v | error: %s",
+				c.config.ID,
+				err,
+			)
+		return err
+	}
+
+	return err
+}
+
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop(ctx context.Context) {
 			 
@@ -113,7 +129,7 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 
 		defer c.StopClient(); // Stop always since we dont really check/want to check wether it was already closed.
 
-		if (c.createClientReader() != nil) { // Abort client If reader failed.
+		if (c.initConnection() != nil || c.createClientReader() != nil) { // Abort client If reader or connection start failed
 			return
 		}
 
@@ -138,10 +154,12 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 				total+= count
 				log.Infof("action: send %d bets | result: success", count)
 				count, err = c.betReader.YieldBatch(packetBuilder)
+			} else {
+				break // Do not print message as Read of Batch error.
 			}
 		}
 
-		log.Infof("action: finished sending bets | total sent: %d", count)
+		log.Infof("action: finished sending bets | total sent: %d", total)
 
 }
 

@@ -4,6 +4,10 @@ import threading
 from .server_protocol import ServerProtocol 
 from . import utils 
 
+ALL_OK = 0
+ERROR_CODE = 1
+
+
 class Server:
     def __init__(self, port, listen_backlog):
         # Initialize server socket
@@ -41,9 +45,14 @@ class Server:
             try:
                 client_sock = self.__accept_new_connection()
                 self.__handle_client_connection(client_sock)
+
+                # In the future it would be needed locking. Now its overkill
+                if self._running:
+                    self.active_connection = None
+                    client_sock.close()                
             except OSError as e:
                 if self._running:
-                    logging.error("action: listen_message | result: fail | error: {e}")
+                    logging.error(f"action: client handler | result: fail | error: {e}")
 
 
         logging.info(f'server exited run loop.')
@@ -55,21 +64,48 @@ class Server:
         If a problem arises in the communication with the client, the
         client socket will also be closed
         """
+        agency = ""
+        count = 0
         try:
             agency = client_sock.recv_str()
 
-            bet = client_sock.recv_bet()
-
-            bet = utils.Bet(agency, bet.first_name, bet.last_name, str(bet.document), bet.birthdate, str(bet.number))
-            utils.store_bets([bet])
-            logging.info(f"action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}")
         except Exception as e:
-            logging.error(f"action: receive_bet | result: fail | error: {e}")
-        finally:
-            # In the future it would be needed locking. Now its overkill
-            if self._running:
-                self.active_connection = None
-                client_sock.close()
+            logging.error(f"action: receive_bet_count | result: fail | error: {e}")
+            return
+        total = 0
+
+        try:
+            count = client_sock._recv_int32() # Count of bets in batch
+            while count > 0:
+                total+= count
+
+                logging.info(f"action: client batch recv init | result: success | agency: {agency} | count bets {count}")
+
+                res =[]
+
+                for i in range(count):
+                    bet = client_sock.recv_bet()
+                    res.append(utils.Bet(agency, bet.first_name, bet.last_name, str(bet.document), bet.birthdate, str(bet.number)))
+
+                utils.store_bets(res)
+
+                #logging.info(f"action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}")
+                logging.info(f"action: apuesta_recibida | result: success | cantidad: {count}")
+                client_sock.send_int32(ALL_OK) 
+                count = client_sock._recv_int32() # Count of bets in batch
+            
+
+            logging.info(f"action: client connection finished | result: success | agency: {agency} | count bets {total}")
+
+        except Exception as e:
+            logging.error(f"action: apuesta_recibida | result: fail | cantidad: {count}")
+            logging.error(f"total recv {total} error: {e}")
+
+            #Send response, possible IO error handled by invoker
+            client_sock.send_int32(ERROR_CODE)
+            client_sock.send_str(f"{e}")
+
+            return
 
 
     def __accept_new_connection(self):

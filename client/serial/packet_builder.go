@@ -46,6 +46,7 @@ func (builder *PacketBuilder) SendPacket(count int32, conn *ClientConnection) er
 		return errors.New("Send packet failed, empty data")		
 	}
 
+
 	builder.serializer.WriteInt(count)
 	defer builder.serializer.Clear()
 
@@ -54,6 +55,7 @@ func (builder *PacketBuilder) SendPacket(count int32, conn *ClientConnection) er
 	if err != nil{
 		return err
 	}
+
 	// Send bets
 	err= conn.SendBytes(builder.data)
 	if err != nil{

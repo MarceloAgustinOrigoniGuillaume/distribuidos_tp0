@@ -1,5 +1,6 @@
 import socket
 
+TIMEOUT_SECONDS = 3
 class BetDTO:
     def __init__(self, first_name: str, last_name: str, document: int, birthdate: str, number: int):
         self.first_name = first_name
@@ -12,6 +13,7 @@ class BetDTO:
 class ServerProtocol:
     def __init__(self, conn: socket.socket):
         self._conn = conn
+        conn.settimeout(TIMEOUT_SECONDS)
 
     def _recv_bytes(self, size):
         buf = b""
@@ -23,6 +25,16 @@ class ServerProtocol:
                 raise ConnectionError("Socket closed before receiving enough data")
             buf += chunk
         return buf
+
+    def _send_bytes(self, data: bytes):
+        total_sent = 0
+        while total_sent < len(data):
+            sent = self._conn.send(data[total_sent:])
+            if sent == 0:
+                raise ConnectionError("Socket connection broken during send")
+            total_sent += sent
+
+
 
     def _recv_int32(self):
         uint_bytes = self._recv_bytes(4)
@@ -46,6 +58,22 @@ class ServerProtocol:
         number = self._recv_int32()
 
         return BetDTO(name, surname, dni, birth, number)
+
+
+
+
+    def send_int32(self, value: int):
+        int_bytes = value.to_bytes(4, byteorder='big', signed=True)
+        self._send_bytes(int_bytes)
+
+    def _send_u16(self, value: int):
+        u16_bytes = value.to_bytes(2, byteorder='big', signed=False)
+        self._send_bytes(u16_bytes)
+
+    def send_str(self, value: str):
+        encoded = value.encode("utf-8")
+        self._send_u16(len(encoded))  # send length first
+        self._send_bytes(encoded)
 
 
     def close(self):

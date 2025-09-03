@@ -34,7 +34,6 @@ func NewClientConnection(servAddr string) (*ClientConnection, error) {
 }
 
 
-
 func (c *ClientConnection) SendBytes(data []byte) error {
 	totalSent := 0
 	for totalSent < len(data) {
@@ -45,6 +44,13 @@ func (c *ClientConnection) SendBytes(data []byte) error {
 		totalSent += n
 	}
 	return nil
+}
+
+
+
+
+func (c *ClientConnection) Send(data *ClientSerializer) error {
+	return c.SendBytes(data.GetData())
 }
 
 func (c *ClientConnection) ReadBytes(n int) ([]byte, error) {

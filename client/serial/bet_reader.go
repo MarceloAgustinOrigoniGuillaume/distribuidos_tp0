@@ -5,6 +5,7 @@ import (
 	"os"	
 	"fmt"
 	"strconv"
+	"io"
 )
 
 type BetReader struct {
@@ -35,7 +36,7 @@ func NewBetReader(batchSize int32, file string) (*BetReader, error) {
 func (reader *BetReader) yieldBet(packetBuilder *PacketBuilder) (bool, error) {
 	record, err := reader.csvReader.Read()
 	if err != nil {
-		return false, fmt.Errorf("failed to read CSV: %w", err)
+		return false, err
 	}
 
 	// Asummed format name, surname , dni, birth, number
@@ -80,9 +81,14 @@ func (reader *BetReader) YieldBatch(packetBuilder *PacketBuilder) (int32, error)
 	readedCount:= reader.currentBetCount
 	if continueReading{
 		reader.currentBetCount = 0
-	} else {
+	} else if err == nil {
 		readedCount-=1 // Subtract the last bet since it was left for the next batch.
 		reader.currentBetCount = 1 // Remainder bet counted. This could be on the PacketBuilder but better to separate concerns.
+	} else if err == io.EOF {
+		// Ignore EOF error, the next yield will throw readCount == 0 allegedly. But send last readedCount bets. 
+		err = nil
+		reader.currentBetCount = 0		
+		readedCount-=1 // Subtract the last bet since the EOF was counted as a bet.
 	}
 
 	return readedCount, err
