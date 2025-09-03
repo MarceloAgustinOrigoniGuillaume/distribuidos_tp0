@@ -6,6 +6,7 @@ import (
 	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/serial"
 
 	"github.com/op/go-logging"
+	"io"
 )
 
 var log = logging.MustGetLogger("log")
@@ -176,7 +177,8 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 			num,  errNum := c.conn.ReadInt()
 			winners := make([]BetWinner, 0,5)
 
-			for c.checkContinue(ctx, "Receive winner number", errNum) && num != WINNERS_EOF{
+			// If server is not interrupted it should not happend that io.EOF is received here.
+			for errNum != io.EOF && c.checkContinue(ctx, "Receive winner number", errNum) && num != WINNERS_EOF{
 				dni, errDni := c.conn.ReadStr()
 				if (!c.checkContinue(ctx, "Receive winner dni", errDni)){
 					return
