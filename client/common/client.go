@@ -176,7 +176,7 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 			// Can be a winning number, or -1 If no more winners.
 			num,  errNum := c.conn.ReadInt()
 			winners := make([]BetWinner, 0,5)
-
+			i:=0
 			// If server is not interrupted it should not happend that io.EOF is received here.
 			for errNum != io.EOF && c.checkContinue(ctx, "Receive winner number", errNum) && num != WINNERS_EOF{
 				dni, errDni := c.conn.ReadStr()
@@ -187,14 +187,14 @@ func (c *Client) StartClientLoop(ctx context.Context) {
 					Dni: dni,
 					number: num,
 				})
+				i+=1
+			    log.Infof("action: winner_recv | result: success | Winner: %d | dni: %s",i, dni)
+
 				num, errNum = c.conn.ReadInt()
 			}
 			
 
 			log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %d", len(winners))
-			for i, winner := range winners {
-			    log.Infof("action: winner_recv | result: success | Winner: %d | dni: %s",i,winner.Dni)
-			}
 
 		} else{
 			log.Infof("action: exit | result: success | total_sent: %d", total)

@@ -84,6 +84,7 @@ class Agency:
 
     def wait_stage_end(self):
         self.stage_ended.wait()
+        self.stage_ended.clear()
 
     def end_stage(self):
         self.stage_ended.set()

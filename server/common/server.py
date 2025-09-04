@@ -113,6 +113,9 @@ class Server:
             self._shutdown_event.wait() # Wait for the main thread to notify end of server
         else: # Forcing server shutdown while maybe not accepted all agencies.
             self.accepted_agencies.put(None)
+
+        logging.info(f'action: close_agencies | result: in_progress')
+
         # Close agencies connections
         for agency in agencies:
             agency.close()
