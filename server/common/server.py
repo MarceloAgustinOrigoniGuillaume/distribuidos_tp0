@@ -4,6 +4,7 @@ import threading
 from .server_protocol import ServerProtocol 
 from . import utils 
 from queue import Queue
+from concurrent.futures import ThreadPoolExecutor
 
 class Server:
     def __init__(self, port, listen_backlog, agency_count):
@@ -78,11 +79,11 @@ class Server:
                 return
 
     def run(self):
-        lottery_thread = threading.Thread(target = self.wait_for_lottery)
-        lottery_thread.start()
+
+        executor = ThreadPoolExecutor(max_workers=self.agency_count+1) # All agencies + lottery/orchestrator thread
+        executor.submit(self.wait_for_lottery)
 
         accepted_count = 0
-        threads = []
         agencies = []
         while self.should_run() and accepted_count< self.agency_count: 
             # Enforce only up to the registered agencies, this saves the need to close the server socket from wait lottery
@@ -92,11 +93,8 @@ class Server:
                 accepted_count+=1
                 agencies.append(agency)
                 self.accepted_agencies.put(agency)
+                executor.submit(self.__handle_client, agency)
 
-                thread = threading.Thread(target= self.__handle_client, args = (agency,))
-                thread.setDaemon(True)
-                threads.append(thread)
-                thread.start()                
             except OSError as e:
                 if self.should_run():
                     logging.error(f"action: client accepter | result: fail | error: {e}")
@@ -110,12 +108,7 @@ class Server:
         for agency in agencies:
             agency.close()
 
-        # Join threads
-        for thread in threads:
-            thread.join()
-
-
-        lottery_thread.join()
+        executor.shutdown(wait=True)
         logging.info(f'action: server_exit | result: success | accepted: {accepted_count} agencies')
 
 
