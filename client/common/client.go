@@ -7,10 +7,13 @@ import (
 
 	"github.com/op/go-logging"
 	"io"
+	"time"
 )
 
 var log = logging.MustGetLogger("log")
 const WINNERS_EOF = int32(-1)
+const CONNECT_ATTEMPTS = 3
+const RETRY_DELAY      = 1 * time.Second
 type BetWinner struct {
 	Dni string
 	number int32
@@ -50,22 +53,31 @@ func NewClient(config ClientConfig) *Client {
 // is returned
 func (c *Client) createClientSocket() error {
 
+	for attempt := 1; attempt <= CONNECT_ATTEMPTS; attempt++ {
+		conn, err = serial.NewClientConnection(c.config.ServerAddress)
+		if err == nil {
+			// Successful connection
+			c.lock.Lock()
+			defer c.lock.Unlock()
+			c.conn = conn
+			return nil
+		}
 
-	conn, err := serial.NewClientConnection(c.config.ServerAddress)
-
-	if err != nil {
-		log.Criticalf(
-			"action: connect | result: fail | client_id: %v | error: %v",
-			c.config.ID,
-			err,
+		log.Infof(
+			"action: connect_retry | result: in_progress | attempt: %d/%d | client_id: %v | error: %v",
+			attempt, CONNECT_ATTEMPTS, c.config.ID, err,
 		)
-		return err
+
+		time.Sleep(retryDelay)
 	}
 
-	c.lock.Lock()
-    defer c.lock.Unlock()	
-	c.conn = conn
-	return nil
+	log.Errorf(
+		"action: connect | result: fail | client_id: %v | error: %v",
+		c.config.ID,
+		err,
+	)
+	
+	return err
 }
 
 func (c *Client) createClientReader() error {

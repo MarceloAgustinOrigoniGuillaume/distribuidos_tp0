@@ -7,12 +7,16 @@ from . import utils
 from queue import Queue
 from concurrent.futures import ThreadPoolExecutor
 
+ACCEPT_TIMEOUT = 5
 class Server:
     def __init__(self, port, listen_backlog, agency_count):
         # Initialize server socket
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
+
+        # Just in case to avoid deadlocks, not the best If it were in a real case scenario
+        self._server_socket.settimeout(ACCEPT_TIMEOUT) 
         self.agency_count = agency_count
 
         self.accepted_agencies = Queue()
