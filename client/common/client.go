@@ -52,9 +52,10 @@ func NewClient(config ClientConfig) *Client {
 // failure, error is printed in stdout/stderr and exit 1
 // is returned
 func (c *Client) createClientSocket() error {
-
+	conn, err := serial.NewClientConnection(c.config.ServerAddress)
+		
 	for attempt := 1; attempt <= CONNECT_ATTEMPTS; attempt++ {
-		conn, err = serial.NewClientConnection(c.config.ServerAddress)
+		
 		if err == nil {
 			// Successful connection
 			c.lock.Lock()
@@ -68,7 +69,8 @@ func (c *Client) createClientSocket() error {
 			attempt, CONNECT_ATTEMPTS, c.config.ID, err,
 		)
 
-		time.Sleep(retryDelay)
+		time.Sleep(RETRY_DELAY)
+		conn, err = serial.NewClientConnection(c.config.ServerAddress)	
 	}
 
 	log.Errorf(
