@@ -18,7 +18,7 @@ Los targets disponibles son:
 | `build` | Compila la aplicación cliente para ejecución en el _host_ en lugar de en Docker. De este modo la compilación es mucho más veloz, pero requiere contar con todo el entorno de Golang y Python instalados en la máquina _host_. |
 
 Previamente se puede correr:
-| `./generar-compose.sh <output> <number_of_clients>` | Compila la aplicación cliente para ejecución en el _host_ en lugar de en Docker. De este modo la compilación es mucho más veloz, pero requiere contar con todo el entorno de Golang y Python instalados en la máquina _host_. |
+| `./generar-compose.sh <output> <number_of_clients>` | Genera el docker compose a tal output con la cantidad de clientes |
 
 Para el ejercicio 6, esta rama, sera necesario que se pongan el dataset.zip, los csv extraerlos a la carpeta .data . O agregar manualmente .csv validos.
 ### Servidor
