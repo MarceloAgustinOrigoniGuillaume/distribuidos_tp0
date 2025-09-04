@@ -21,7 +21,7 @@ class Agency:
         agency_id = ""
         count = 0
         try:
-            agency_id = agency.conn.recv_str()
+            agency_id = self.conn.recv_str()
             self.agency_id = int(agency_id)
         except Exception as e:
             logging.error(f"action: receive_bet_count | result: fail | error: {e}")
