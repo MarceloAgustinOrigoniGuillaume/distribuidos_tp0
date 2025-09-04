@@ -13,7 +13,7 @@ class Agency:
     def __init__(self, connection: ServerProtocol):
         self.conn = connection
         self.winners = Queue()
-        self.bets_received = threading.Event()
+        self.stage_ended = threading.Event()
         self.agency_id = None
 
 
@@ -51,7 +51,7 @@ class Agency:
                 self.conn.send_int32(ALL_OK) 
                 count = self.conn._recv_int32() # Count of bets in batch
 
-            self.bets_received.set()
+            self.end_stage()
             logging.info(f"action: recv_agency_bets | result: success | agency_id: {agency_id} | count_bets: {total}")
             return True
 
@@ -67,6 +67,8 @@ class Agency:
 
     def notify_winner(self, bet):
         self.winners.put(bet)
+
+
     def send_winner(self, bet):
         # None bet If server shutdown or winners EOF
         if bet != None:
@@ -80,7 +82,13 @@ class Agency:
     def finished_winners(self):
         self.winners.put(None)
 
+    def wait_stage_end(self):
+        self.stage_ended.wait()
 
+    def end_stage(self):
+        self.stage_ended.set()
+        
     def close(self):
         self.conn.close()
         self.winners.put(None)
+        self.end_stage()

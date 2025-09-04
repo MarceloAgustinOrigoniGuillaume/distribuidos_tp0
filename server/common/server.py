@@ -42,6 +42,9 @@ class Server:
                 bet = agency.winners.get()
                 while agency.send_winner(bet):
                     bet = agency.winners.get()
+
+                # End winners recv stage, its needed to notify to wait for all agencies to send their winners
+                agency.end_stage()
         except OSError as e:
             if self.should_run():
                 logging.error(f"action: client_handling | result: fail | error: {e}")
@@ -54,7 +57,7 @@ class Server:
 
         while new_agency != None: # new_agency == None means should not run anymore.. == not self.should_run()            
             
-            new_agency.bets_received.wait() # bets received could be triggered by accepter in case of server shutdown
+            new_agency.wait_stage_end() # bets received could be triggered by accepter in case of server shutdown
             if not self.should_run():
                 return
 
@@ -73,6 +76,11 @@ class Server:
                 
                 for agency in awaiting_agencies.values():
                     agency.finished_winners()
+
+
+                # Wait for all agency to send their winners before finishing
+                for agency in awaiting_agencies.values():
+                    agency.wait_stage_end()
 
                 logging.info("action: sorteo | result: success")
                 
